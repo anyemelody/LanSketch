@@ -1,0 +1,23 @@
+{
+  "name": "lansketch",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "canvas-sketch": "^0.7.7",
+    "eases": "^1.0.8",
+    "glsl-noise": "^0.0.0",
+    "glslify": "^7.1.1",
+    "lerp": "^1.0.3",
+    "p5": "^1.10.0",
+    "primitive-quad": "^2.0.0",
+    "regl": "^2.1.0"
+  }
+}
