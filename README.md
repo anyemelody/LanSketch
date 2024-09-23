@@ -1,7 +1,7 @@
 # Lan Flower Sketch 
 Lan Flower Sketch is one of my creative work to use pure math and shader knowledge to draw the orchard flowers in ancient chinese painting style.
 
-![](https://github.com/anyemelody/LanSketch/blob/main/Lan%20Sketch.gif)
+![](https://github.com/anyemelody/LanSketch/blob/main/Images/Lan%20Sketch.gif)
 
 You can preview the effect on 
 https://anyemelody.github.io/LanSketch/
