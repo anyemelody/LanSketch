@@ -23,6 +23,9 @@ The project consists of three components: the flower, the branch and the backgro
 ### Branch Design
 Here is a detailed explanation of the branch component. So the `SingleBranch.js` defines each single branch, meanwhile each single branch consists of several lines that defines in `BranchLine.js`. The reason to use several lines to consist one branch is I want more dynamic colors for each branch.
 ![](https://github.com/anyemelody/LanSketch/blob/main/Images/Branch%20Diagram.png)
+<div align="center">
+	<img width = "50%" src="https://github.com/anyemelody/LanSketch/blob/main/Images/Branch_SingleLine.jpg"><img width = "50%" src="https://github.com/anyemelody/LanSketch/blob/main/Images/Branh_MultiLine.jpg">
+</div>
 
 ### Flower Design
 For each flower, the interaction is when you click on the canvas, it will generate a new lan flower on the position where you clicked. In order to make the flower has more dynamic shape and color, each flower consist of 4 or 5 petals. Meanwhile each petal consists of a set of lines. The line has the basic shape of sin wave with some noise on the curve. The color of the lines are changing according to the line position to create the gradient effect.
@@ -43,4 +46,8 @@ For each flower, the interaction is when you click on the canvas, it will genera
     this.lineStep++;
 
     }
+
+<div align="center">
+	<img width = "50%" src="https://github.com/anyemelody/LanSketch/blob/main/Images/Flower_MultiLines.jpg"><img width = "50%" src="https://github.com/anyemelody/LanSketch/blob/main/Images/Flower_BezierLine.png">
+</div>
 
