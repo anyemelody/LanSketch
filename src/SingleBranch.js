@@ -1,14 +1,21 @@
 import BranchLine from "./BranchLine";
 
 class SingleBranch {
-    constructor(graphic, BranchIndex, totalBranch, branchLength) {
+    constructor(graphic, BranchIndex, totalBranch, branchLength, rock) {
         this.graphic = graphic;
         this.totalLineNum = Math.floor(this.graphic.random(6, 9));
         this.branchLines = [];
         this.branchIndex = BranchIndex;
         this.totalBranch = totalBranch;
         this.branchRatio = (this.branchIndex + 1) / this.totalBranch;
-        this.translatePos = this.graphic.createVector(this.graphic.random(-100, 100), this.graphic.random(400, 450));
+        if (rock) {
+            // root hides just behind the stone, between the crevice and the nearby edges
+            const baseX = rock.crevice.x + this.graphic.random(-80, 80);
+            const baseY = rock.topY(baseX) + this.graphic.random(8, 16);
+            this.translatePos = this.graphic.createVector(baseX - 512, baseY - 512);
+        } else {
+            this.translatePos = this.graphic.createVector(this.graphic.random(-100, 100), this.graphic.random(400, 450));
+        }
         this.stop = false;
         this.noiseSeed = this.graphic.random(0, 1000);
         this.deltaRotateNoise = this.graphic.random(1);
@@ -32,9 +39,6 @@ class SingleBranch {
         this.rotateDir = Math.sign(this.rotateAngle);
         this.rot = this.startRotate;
 
-        let options = { width: 1024, height: 1024 };
-        this.buffer = this.graphic.createFramebuffer(options);
-
         for (let i = 0; i < this.totalLineNum; i++) {
             this.lineRatio = i / this.totalLineNum;
             this.branchLines[i] = new BranchLine(
@@ -52,16 +56,14 @@ class SingleBranch {
         }
     }
 
-    drawSingleBranch() {
-        for (let i = this.totalLineNum - 1; i >= 0; i--) {
-            if (!this.branchLines[i].stop) {
-                this.branchLines[i].update();
-                this.branchLines[i].draw();
-                this.branchLines[i].checkStep();
-            } else {
-                this.stop = true;
-            }
-        }
+    // runs all lines to the end; returns the leaf for LeafMesh (lines in draw order)
+    bake() {
+        const lines = [];
+        for (let i = this.totalLineNum - 1; i >= 0; i--) lines.push(this.branchLines[i].run());
+        this.stop = true;
+        const base = { x: 512 + this.translatePos.x, y: 512 + this.translatePos.y };
+        const P = lines[0].pts, m = Math.floor(P.length / 4);
+        return { base, length: this.totalStep, lines, mid: { x: base.x + P[m * 2], y: base.y + P[m * 2 + 1] } };
     }
 }
 export default SingleBranch;

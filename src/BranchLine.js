@@ -3,7 +3,6 @@ class BranchLine {
         this.graphic = graphic;
         this.startRotation = startRotation;
         this.pos = this.graphic.createVector(0, 0);
-        this.pPos = this.pos.copy();
         this.vel = this.graphic.createVector(0, 0);
         this.deltaRotate = 0;
         this.lineStep = 0;
@@ -54,19 +53,23 @@ class BranchLine {
         this.lineStep++;
     }
 
-    draw() {
-        //define stroke alpha
-        this.graphic.stroke(this.strokeColor);
-        let basicWeight = this.graphic.map(this.lineStep / this.totalStep, 0, 1, this.strokeWeight, 0.1);
-        this.graphic.strokeWeight(basicWeight);
-        this.graphic.line(this.pPos.x, this.pPos.y, this.pos.x, this.pos.y);
-        this.pPos = this.pos.copy();
-    }
-
-    checkStep() {
-        if (this.lineStep >= this.totalStep) {
-            this.stop = true;
+    // runs the walker to the end without drawing and keeps its points (leaf-local) and
+    // the stroke width at each point (root strokeWeight tapering to 0.1 at the tip)
+    run() {
+        const n = this.totalStep;
+        const pts = new Float32Array((n + 1) * 2);
+        const widths = new Float32Array(n + 1);
+        pts[0] = this.pos.x; pts[1] = this.pos.y;
+        widths[0] = this.strokeWeight;
+        while (this.lineStep < n) {
+            this.update();
+            const k = this.lineStep;
+            pts[k * 2] = this.pos.x; pts[k * 2 + 1] = this.pos.y;
+            widths[k] = this.graphic.map(k / n, 0, 1, this.strokeWeight, 0.1);
         }
+        this.stop = true;
+        const [r, g, b] = this.strokeColor.levels;
+        return { pts, widths, rgb: [r / 255, g / 255, b / 255] };
     }
 }
 
