@@ -50,19 +50,43 @@ class PetalLine {
     this.lineStep++;
   }
 
-  drawLine() {
+  // colour and weight of the current step (after updateStep)
+  stepStyle() {
     // define stroke alpha
     let strokeAlpha = this.graphic.map(this.lineStep / this.totalStep, 0, 1, 10, 70);
     this.brightness = (this.graphic.noise(this.ampNoise + this.lineStep * 0.06) + 0.5) * 80;
     this.saturation = this.graphic.map(this.brightness, 40, 120, 90, 30);
     this.strokeColor = this.graphic.color(this.hue, this.saturation, this.brightness, strokeAlpha);
-    this.graphic.stroke(this.strokeColor);
     // define strokewight
     let updateWeight = this.graphic.map(this.lineStep / this.totalStep, 0, 1, this.strokeWeight * 0.1, this.strokeWeight);
+    return updateWeight;
+  }
+
+  drawLine() {
+    let updateWeight = this.stepStyle();
+    this.graphic.stroke(this.strokeColor);
     this.graphic.strokeWeight(updateWeight);
     this.graphic.strokeJoin(this.graphic.ROUND);
     this.graphic.line(this.pPos.x, this.pPos.y, this.pos.x, this.pos.y);
     this.pPos = this.pos.copy();
+  }
+
+  // runs the line to the end without drawing (for FlowerMesh). Per step: the point,
+  // the stroke weight and the colour drawLine would use, as rgba 0..1 (alpha straight).
+  bake() {
+    const n = Math.ceil(this.totalStep) + 1;   // totalStep need not be a whole number
+    const pts = new Float32Array(n * 2), widths = new Float32Array(n), cols = new Float32Array(n * 4);
+    let k = 0;
+    while (!this.stop) {
+      this.updateStep();
+      widths[k] = this.stepStyle();
+      pts[k * 2] = this.pos.x; pts[k * 2 + 1] = this.pos.y;
+      const [r, g, b, a] = this.strokeColor.levels;
+      cols.set([r / 255, g / 255, b / 255, a / 255], k * 4);
+      k++;
+      this.checkStep();
+    }
+    return { pts: pts.subarray(0, k * 2), widths: widths.subarray(0, k), cols: cols.subarray(0, k * 4) };
   }
 
   checkStep() {

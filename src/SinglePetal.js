@@ -23,6 +23,11 @@ class SinglePetal {
     this.rotate += this.rotateRandom;
   }
 
+  // every line run to the end; points in the petal's own frame (rotate not applied)
+  bake() {
+    return { rotate: this.rotate, steps: this.steps, lines: this.petal.map((l) => l.bake()) };
+  }
+
   drawPetal() {
     for (let i = 0; i < this.lineNum; i++) {
       if (!this.petal[i].stop) {

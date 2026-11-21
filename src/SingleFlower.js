@@ -18,6 +18,12 @@ class SingleFlower {
         }
     }
 
+    // the finished flower as geometry, for FlowerMesh. Call right after setFlower(): the
+    // petals share p5's one noise field, seeded by the last petal set up.
+    bake() {
+        return { size: this.size, petals: this.flowerPetals.map((p) => p.bake()) };
+    }
+
     drawFlower() {
         for (let i = 0; i < this.nbPetals; i++) {
             this.graphic.push();

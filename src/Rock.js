@@ -20,19 +20,26 @@ function mulberry32(a) {
 // where the orchid roots, and some small dots trailing off into the paper.
 // Everything is translucent, drawn once. Canvas pixels, origin top left (P2D).
 class Rock {
-    constructor(graphic, seed) {
+    // opts (all optional, for the smaller clumps further up the slope):
+    //   anchor {x, y}: where the orchid roots (default: picked from the seed in the bottom band)
+    //   scale: size of the whole stone, strokes and dabs (default 1)
+    //   lean: -1 or 1, the side the mass leans to (default: from the seed, toward the centre near an edge)
+    constructor(graphic, seed, opts = {}) {
         this.graphic = graphic;
         this.seed = seed;
         this.rand = mulberry32(seed);
+        this.scale = opts.scale || 1;
         // the mass leans to one side of the orchid
         this.side = this.rand() < 0.5 ? -1 : 1;
         // anchor: anywhere in the middle 60% across, and in the bottom band between
         // 1/3 and 1/8 of the height measured from the bottom
-        const cx = 512 + this.r(-0.3, 0.3) * W;
-        const cy = this.r(H * 2 / 3, H * 7 / 8);
+        let cx = 512 + this.r(-0.3, 0.3) * W;
+        let cy = this.r(H * 2 / 3, H * 7 / 8);
+        if (opts.anchor) { cx = opts.anchor.x; cy = opts.anchor.y; }
         // far from the centre, the stone leans back toward it so it is not cut by the edge
         if (cx - W / 2 > LEAN_IN) this.side = -1;
         else if (W / 2 - cx > LEAN_IN) this.side = 1;
+        if (opts.lean) this.side = Math.sign(opts.lean);
         this.crevice = { x: cx, y: cy };
         this.bars = this.planBars(cx, cy).map((b) => this.fit(b));
         this.edge = this.buildTop();
@@ -67,29 +74,30 @@ class Rock {
 
     planBars(cx, cy) {
         const s = this.side;
+        const k = this.scale;
         const bars = [];
         // slabs stacked under one another, each a little further toward the lean side,
         // touching or just apart so together they read as one stone
-        const below = (b, w) => b.a.y + b.w / 2 + w / 2 + this.r(-4, 10);
+        const below = (b, w) => b.a.y + b.w / 2 + w / 2 + this.r(-4, 10) * k;
         // top slab: the orchid grows out of it
-        const t0 = cx - s * this.r(85, 95);
-        const w1 = this.r(32, 40);
-        const top = this.bar(t0, t0 + s * this.r(170, 180), cy + 10, w1, "dark", this.r(-6, 6));
+        const t0 = cx - s * this.r(85, 95) * k;
+        const w1 = this.r(32, 40) * k;
+        const top = this.bar(t0, t0 + s * this.r(170, 180) * k, cy + 10 * k, w1, "dark", this.r(-6, 6) * k);
         bars.push(top);
         // second slab, starting under the orchid and reaching out further
-        const w2 = this.r(26, 34);
-        const m0 = cx - s * this.r(0, 30);
-        const mid = this.bar(m0, m0 + s * this.r(150, 180), below(top, w2), w2, this.rand() < 0.5 ? "dark" : "mid");
+        const w2 = this.r(26, 34) * k;
+        const m0 = cx - s * this.r(0, 30) * k;
+        const mid = this.bar(m0, m0 + s * this.r(150, 180) * k, below(top, w2), w2, this.rand() < 0.5 ? "dark" : "mid");
         bars.push(mid);
         // third, lowest and furthest, pale
-        const w3 = this.r(20, 28);
-        const l0 = cx + s * this.r(70, 120);
-        bars.push(this.bar(l0, l0 + s * this.r(110, 160), below(mid, w3), w3, "pale"));
+        const w3 = this.r(20, 28) * k;
+        const l0 = cx + s * this.r(70, 120) * k;
+        bars.push(this.bar(l0, l0 + s * this.r(110, 160) * k, below(mid, w3), w3, "pale"));
         // a short slab on the other side of the orchid, sometimes
         if (this.rand() < 0.65) {
-            const o0 = cx - s * this.r(85, 105);
-            const w4 = this.r(18, 26);
-            bars.push(this.bar(o0, o0 - s * this.r(60, 100), below(top, w4) - this.r(0, 10), w4,
+            const o0 = cx - s * this.r(85, 105) * k;
+            const w4 = this.r(18, 26) * k;
+            bars.push(this.bar(o0, o0 - s * this.r(60, 100) * k, below(top, w4) - this.r(0, 10) * k, w4,
                 this.rand() < 0.5 ? "pale" : "mid"));
         }
         return bars;
@@ -144,7 +152,9 @@ class Rock {
             mid: { b: [14, 24], a: [48, 68], dry: 0.5, body: 6.5 },
             pale: { b: [28, 40], a: [36, 52], dry: 0.7, body: 5 }
         }[bar.ink];
-        const n = strands || Math.floor(g.random(28, 40));
+        // a smaller stone is painted with a smaller brush: fewer, finer hairs
+        const k = this.scale;
+        const n = strands || Math.max(8, Math.floor(g.random(28, 40) * k));
         if (!strands) this.body(bar, ink.body, (ink.b[0] + ink.b[1]) / 2 + 22);
         // which edge carries the ink; the top slab is loaded along its upper edge, where
         // it sits over the ends of the leaves
@@ -159,7 +169,7 @@ class Rock {
             const edge = (across * loaded + 1) / 2;
             const ragged = Math.pow(g.random(), 0.6);
             new RockLine(g, path, across * bar.w / 2 + g.random(-1.2, 1.2), {
-                weight: g.random(1.0, 3.4) * (0.7 + 0.5 * edge),
+                weight: g.random(1.0, 3.4) * (0.7 + 0.5 * edge) * Math.sqrt(k),
                 color: this.col(g.random(25, 45), g.random(2, 6), g.random(ink.b[0], ink.b[1]),
                     g.random(ink.a[0], ink.a[1]) * (0.45 + 0.55 * edge)),
                 dry: ink.dry * g.random(0.9, 1.1),
@@ -297,11 +307,12 @@ class Rock {
         const [top, mid, low] = this.bars;
         const s = this.side;
         // one wash under the low slab, sometimes a smaller one under the short slab opposite
-        const wx = low.a.x + s * g.random(-50, 10);
-        this.wash(wx, wx + s * g.random(130, 190), (mid.b.y + low.a.y) / 2 + g.random(0, 10), g.random(18, 26), g.random(5, 8));
+        const k = this.scale;
+        const wx = low.a.x + s * g.random(-50, 10) * k;
+        this.wash(wx, wx + s * g.random(130, 190) * k, (mid.b.y + low.a.y) / 2 + g.random(0, 10) * k, g.random(18, 26) * k, g.random(5, 8));
         if (g.random() < 0.6) {
             const o = this.bars[3] || top;
-            this.wash(o.a.x - s * g.random(0, 20), o.b.x, o.a.y + g.random(4, 14), g.random(12, 18), g.random(5, 8));
+            this.wash(o.a.x - s * g.random(0, 20) * k, o.b.x, o.a.y + g.random(4, 14) * k, g.random(12, 18) * k, g.random(5, 8));
         }
     }
 
@@ -313,50 +324,77 @@ class Rock {
         const g = this.graphic;
         const { x } = this.crevice;
         const s = this.side;
+        const k = this.scale;
         // along the line where the orchid roots, covering where the leaves converge
         const n = Math.floor(g.random(2, 4));
         for (let i = 0; i < n; i++) {
-            const dx = (n > 1 ? (i / (n - 1)) * 2 - 1 : 0) * g.random(35, 55) + g.random(-10, 10);
-            this.dab(x + dx, this.topY(x + dx) + g.random(12, 18), g.random(18, 28), g.random(6, 9),
+            const dx = ((n > 1 ? (i / (n - 1)) * 2 - 1 : 0) * g.random(35, 55) + g.random(-10, 10)) * k;
+            this.dab(x + dx, this.topY(x + dx) + g.random(12, 18) * k, g.random(18, 28) * k, g.random(6, 9) * k,
                 g.random(-0.25, 0.25), g.random(4, 9), g.random(82, 92));
         }
         // one in the gap between the second and third slab
         const mid = this.bars[1];
-        this.dab(mid.b.x - s * g.random(10, 30), Math.min(H - 12, mid.b.y + mid.w / 2 + g.random(4, 10)), g.random(10, 16),
-            g.random(4, 7), g.random(-0.5, 0.5), g.random(8, 14), g.random(70, 85));
+        this.dab(mid.b.x - s * g.random(10, 30) * k, Math.min(H - 12, mid.b.y + mid.w / 2 + g.random(4, 10) * k), g.random(10, 16) * k,
+            g.random(4, 7) * k, g.random(-0.5, 0.5), g.random(8, 14), g.random(70, 85));
     }
 
     // small detached dabs and flecks trailing off past the lowest slab, fading out
     drawTrail() {
         const g = this.graphic;
         const s = this.side;
+        const k = this.scale;
         const low = this.bars[2];
-        let x = low.b.x + s * g.random(10, 25);
-        let y = Math.min(low.b.y + g.random(-6, 10), H - EDGE_BOTTOM);
+        let x = low.b.x + s * g.random(10, 25) * k;
+        let y = Math.min(low.b.y + g.random(-6, 10) * k, H - EDGE_BOTTOM);
         const n = Math.floor(g.random(4, 7));
         for (let i = 0; i < n; i++) {
             if (x < 120 || x > W - 120) break;
             const fade = 1 - i / n;
             if (g.random() < 0.35) {
                 // a tiny dry fleck, a few hairs
-                const len = g.random(14, 30);
-                const fleck = this.fit(this.bar(x, x + s * len, y, g.random(5, 9), "pale", g.random(-4, 4)));
+                const len = g.random(14, 30) * k;
+                const fleck = this.fit(this.bar(x, x + s * len, y, g.random(5, 9) * k, "pale", g.random(-4, 4) * k));
                 this.sideBrush(fleck, 5);
             } else {
-                this.dab(x, y, g.random(4, 9) * (0.6 + 0.4 * fade), g.random(2, 4), g.random(-1, 1),
+                this.dab(x, y, g.random(4, 9) * (0.6 + 0.4 * fade) * k, g.random(2, 4) * k, g.random(-1, 1),
                     g.random(15, 35), 30 + 45 * fade);
             }
-            x += s * g.random(8, 40);
-            y = Math.min(y + g.random(-6, 14), H - EDGE_BOTTOM);
+            x += s * g.random(8, 40) * k;
+            y = Math.min(y + g.random(-6, 14) * k, H - EDGE_BOTTOM);
         }
     }
 
-    // draws everything once into this.graphic
-    draw() {
+    // a few loose pale dabs and dry flecks on the way from this stone to another one,
+    // hinting at the slope between them; n is 0..3, kept sparse
+    slopeHints(other, n) {
+        const g = this.graphic;
+        g.randomSeed(this.seed + 17);
+        for (let i = 0; i < n; i++) {
+            const t = (i + 1) / (n + 1) + g.random(-0.08, 0.08);
+            // from the far end of this stone's low slab toward the other stone's
+            const a = this.bars[2].b, b = other.bars[2].a;
+            const x = a.x + (b.x - a.x) * t + g.random(-20, 20);
+            const y = Math.min(H - 24, a.y + (b.y - a.y) * t + g.random(-12, 12));
+            if (x < 60 || x > W - 60) continue;
+            const k = Math.min(this.scale, other.scale);
+            if (g.random() < 0.4) {
+                const len = g.random(14, 34) * k;
+                const sgn = b.x > a.x ? 1 : -1;
+                const fleck = this.fit(this.bar(x, x + sgn * len, y, g.random(5, 8) * k, "pale", g.random(-4, 4) * k));
+                this.sideBrush(fleck, 5);
+            } else {
+                this.dab(x, y, g.random(5, 10) * k, g.random(2, 4) * k, g.random(-0.6, 0.6), g.random(20, 38), g.random(35, 60));
+            }
+        }
+    }
+
+    // draws everything once into this.graphic; clear = false paints over what is there
+    // (several stones share one layer)
+    draw(clear = true) {
         const g = this.graphic;
         g.randomSeed(this.seed);
         g.noiseSeed(this.seed);
-        g.clear();
+        if (clear) g.clear();
         this.drawWash();
         this.drawBars();
         this.drawDabs();
