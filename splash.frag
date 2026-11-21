@@ -90,10 +90,10 @@ void main() {
     vec2 uv = gl_FragCoord.xy / u_resolution.xy;
     float seed = u_time * 0.01;
     bool tuned = u_tuned > 0.5;
-    float INK_STRENGTH = tuned ? u_ink : 0.7;
+    float INK_STRENGTH = tuned ? u_ink : 0.6;
     float BLEED = tuned ? u_bleed : 0.07;
     float TIDE = tuned ? u_tide : 2.0;
-    float GRAIN = tuned ? u_grain : 0.3;
+    float GRAIN = tuned ? u_grain : 0.18;
     float TINT = tuned ? u_tint : 0.8;
 
     //ink bleeds unevenly into wet paper: push the coordinates around with noise before laying the washes

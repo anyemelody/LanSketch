@@ -22,10 +22,10 @@ const settings = {
 
 // background shader settings, changed live from the slider panel (top right)
 const bg = {
-  INK_STRENGTH: 0.7,                 // how dark the wash gets where the layers pile up
+  INK_STRENGTH: 0.6,                 // how dark the wash gets where the layers pile up
   BLEED: 0.07,                       // how far the ink creeps along the paper fibres
   TIDE: 2.0,                         // extra pigment along the edge of each wash as it dries
-  GRAIN: 0.3,                       // pigment settling into the paper grain
+  GRAIN: 0.18,                       // pigment settling into the paper grain
   TINT: 0.8,                         // 0 = pure grey ink, 1 = the full drifting colour
   BG_TIME_PER_SECOND: 2.5            // background drift speed (it used to be 0.1 per frame at ~25 fps)
 };
@@ -96,19 +96,21 @@ const SLOPE_HINTS = 3;               // at most this many loose dabs between nei
 const LAYOUTS = {
   2: [
     // across the diagonal: host low on one side, guest high on the other
-    [[0.26, 0.36, 0.15, 0.24, 1, 1], [0.62, 0.90, 0.36, 0.48, 0.5, 0.8]],
+    [[0.10, 0.46, 0.05, 0.30, 1, 1], [0.54, 0.96, 0.34, 0.80, 0.5, 0.8]],
     // host low near the middle, guest above and out to one side
-    [[0.44, 0.56, 0.14, 0.22, 1, 1], [0.08, 0.30, 0.38, 0.50, 0.45, 0.7]]
+    [[0.34, 0.66, 0.05, 0.30, 1, 1], [0.04, 0.34, 0.36, 0.80, 0.45, 0.7]]
   ],
   3: [
     // uneven triangle: host low at one side, one across and a little higher, the smallest high between them
-    [[0.26, 0.36, 0.14, 0.22, 1, 1], [0.64, 0.90, 0.26, 0.36, 0.6, 0.8], [0.42, 0.54, 0.44, 0.52, 0.4, 0.55]],
+    [[0.10, 0.44, 0.05, 0.30, 1, 1], [0.58, 0.96, 0.20, 0.50, 0.6, 0.8], [0.30, 0.66, 0.52, 0.82, 0.4, 0.55]],
     // climbing a slope with uneven steps: two nearer each other, the third further off
-    [[0.28, 0.38, 0.14, 0.22, 1, 1], [0.50, 0.58, 0.30, 0.38, 0.6, 0.8], [0.80, 0.94, 0.46, 0.52, 0.4, 0.55]],
+    [[0.10, 0.42, 0.05, 0.30, 1, 1], [0.42, 0.70, 0.26, 0.52, 0.6, 0.8], [0.70, 0.96, 0.48, 0.80, 0.4, 0.55]],
     // host low in the middle, guests staggered up either side at different heights
-    [[0.44, 0.56, 0.13, 0.20, 1, 1], [0.08, 0.28, 0.30, 0.40, 0.6, 0.8], [0.68, 0.92, 0.42, 0.52, 0.4, 0.55]]
+    [[0.34, 0.66, 0.05, 0.30, 1, 1], [0.04, 0.32, 0.24, 0.54, 0.6, 0.8], [0.64, 0.96, 0.44, 0.80, 0.4, 0.55]]
   ]
 };
+const CLUMP_MIN_GAP = 230;           // px: no two clumps closer than this
+const CLUMP_MIN_STEP = 70;           // px: and no two at nearly the same height
 // -------------------------------------------------------------------------------------
 
 // Small seeded random generator, for the few things outside p5 (flower colour, sway phases).
@@ -157,10 +159,17 @@ function planClumps(R) {
   const options = LAYOUTS[n];
   const layout = options[Math.floor(R() * options.length) % options.length];
   const mirror = R() < 0.5;
-  const clumps = layout.map((slot, i) => {
-    const fx = lerp(slot[0], slot[1], R());
-    return { x: W * (mirror ? 1 - fx : fx), y: H * (1 - lerp(slot[2], slot[3], R())), scale: lerp(slot[4], slot[5], R()), main: i === 0 };
-  });
+  // the slots are wide and overlap a little, so draw again if two clumps land too close
+  let clumps;
+  for (let tries = 0; tries < 40; tries++) {
+    clumps = layout.map((slot, i) => {
+      const fx = lerp(slot[0], slot[1], R());
+      return { x: W * (mirror ? 1 - fx : fx), y: H * (1 - lerp(slot[2], slot[3], R())), scale: lerp(slot[4], slot[5], R()), main: i === 0 };
+    });
+    const tight = clumps.some((p, i) => clumps.some((q, j) => j > i &&
+      (Math.hypot(p.x - q.x, p.y - q.y) < CLUMP_MIN_GAP || Math.abs(p.y - q.y) < CLUMP_MIN_STEP)));
+    if (!tight) break;
+  }
   // the group leans one way, toward the emptier side of the picture; any clump may lean back
   const meanX = clumps.reduce((sum, c) => sum + c.x * c.scale, 0) / clumps.reduce((sum, c) => sum + c.scale, 0);
   const flow = meanX < W / 2 ? 1 : -1;
