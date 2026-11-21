@@ -196,6 +196,46 @@ function planClumps(R) {
   return clumps;
 }
 
+// A start / stop button (top left) that records the canvas to a webm file. Stops by itself after
+// RECORD_MAX_SECONDS. Only the picture is recorded, not the button or the slider panel.
+const RECORD_MAX_SECONDS = 90;
+function makeRecordButton() {
+  const button = document.createElement('button');
+  button.style.cssText = 'position:fixed;top:8px;left:8px;z-index:10;font:12px/1.4 sans-serif;padding:4px 10px;';
+  button.textContent = 'Record';
+  let recorder = null, timer = null;
+  const stop = () => { if (recorder && recorder.state !== 'inactive') recorder.stop(); };
+  button.addEventListener('click', () => {
+    if (recorder && recorder.state !== 'inactive') { stop(); return; }
+    const canvas = document.querySelector('canvas');
+    const mimeType = ['video/webm;codecs=vp9', 'video/webm'].find((type) => MediaRecorder.isTypeSupported(type));
+    recorder = new MediaRecorder(canvas.captureStream(60), { mimeType, videoBitsPerSecond: 16000000 });
+    const chunks = [];
+    recorder.ondataavailable = (event) => chunks.push(event.data);
+    recorder.onstop = () => {
+      clearInterval(timer);
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' }));
+      link.download = 'lan-seed-' + seed + '.webm';
+      link.click();
+      button.textContent = 'Saved. Record again';
+    };
+    recorder.start();
+    let elapsed = 0;
+    button.textContent = 'Stop (0s)';
+    timer = setInterval(() => {
+      elapsed++;
+      button.textContent = 'Stop (' + elapsed + 's)';
+      if (elapsed >= RECORD_MAX_SECONDS) stop();
+    }, 1000);
+  });
+  // clicks on the button are not clicks on the picture
+  for (const ev of ['pointerdown', 'mousedown', 'mouseup', 'pointerup', 'touchstart'])
+    button.addEventListener(ev, (e) => e.stopPropagation());
+  document.body.appendChild(button);
+  return button;
+}
+
 const sketch = (gl) => {
   noiseSeed(seed);
   // the leaves are no longer drawn with p5: this small graphics only supplies the seeded
@@ -271,6 +311,8 @@ const sketch = (gl) => {
   // for poking at from the console, e.g. lan.leaves.breeze = 0, lan.flowers.flowers[0]
   window.lan = { leaves, flowers, seed, rock: mainRock, clumps, flowerColor, bg };
   const bgPanel = makeBgPanel();
+  // open the page with ?record to get a button that saves a video of the canvas
+  if (params.has('record')) makeRecordButton();
 
   // a click blows a gust through the leaves and stalks, and opens the nearest closed flower
   document.addEventListener("pointerdown", (e) => {
